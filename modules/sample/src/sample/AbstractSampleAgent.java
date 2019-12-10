@@ -6,7 +6,8 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
 import java.util.Map;
-
+import java.util.Collection;
+import java.util.Collections;
 import rescuecore2.worldmodel.EntityID;
 import rescuecore2.Constants;
 import org.apache.log4j.Logger;
@@ -19,6 +20,8 @@ import rescuecore2.standard.entities.Road;
 import rescuecore2.standard.entities.Human;
 import rescuecore2.standard.kernel.comms.ChannelCommunicationModel;
 import rescuecore2.standard.kernel.comms.StandardCommunicationModel;
+import rescuecore2.standard.entities.StandardEntity;
+import rescuecore2.standard.entities.StandardEntityURN;
 
 /**
    Abstract base class for sample agents.
@@ -56,7 +59,7 @@ public abstract class AbstractSampleAgent<E extends StandardEntity> extends Stan
     */
     protected List<EntityID> refugeIDs;
 
-    private Map<EntityID, Set<EntityID>> neighbours;
+    protected Map<EntityID, Set<EntityID>> neighbours;
 
     /**
        Construct an AbstractSampleAgent.
@@ -92,6 +95,42 @@ public abstract class AbstractSampleAgent<E extends StandardEntity> extends Stan
        Construct a random walk starting from this agent's current location to a random building.
        @return A random walk.
     */
+    protected List<EntityID> randomWalkR() {
+        List<EntityID> result = new ArrayList<EntityID>(RANDOM_WALK_LENGTH);
+        Collection<StandardEntity> e = model.getEntitiesOfType(StandardEntityURN.ROAD);
+
+        List<EntityID> routes=new ArrayList<EntityID>();
+
+        for (StandardEntity next : e) {
+            Road r = (Road)next;
+            routes.add(r.getID());
+        }
+
+        Set<EntityID> seen = new HashSet<EntityID>();
+        EntityID current = ((Human)me()).getPosition();
+        for (int i = 0; i < RANDOM_WALK_LENGTH; ++i) {
+            result.add(current);
+            seen.add(current);
+            List<EntityID> possible = new ArrayList<EntityID>(neighbours.get(current));
+            Collections.shuffle(possible, random);
+            boolean found = false;
+            for (EntityID next : possible) {
+              if(routes.contains(next)){
+                  if (seen.contains(next)) {
+                      continue;
+                  }
+                  current = next;
+                  found = true;
+                  break;
+                  }
+            }
+            if (!found) {
+                // We reached a dead-end.
+                break;
+            }
+        }
+        return result;
+    }
     protected List<EntityID> randomWalk() {
         List<EntityID> result = new ArrayList<EntityID>(RANDOM_WALK_LENGTH);
         Set<EntityID> seen = new HashSet<EntityID>();
@@ -116,5 +155,9 @@ public abstract class AbstractSampleAgent<E extends StandardEntity> extends Stan
             }
         }
         return result;
+    }
+
+    public Map<EntityID, Set<EntityID>> getNeighbours(){
+      return this.neighbours;
     }
 }
